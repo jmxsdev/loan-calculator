@@ -1,0 +1,357 @@
+---
+---
+
+<div class="calculator-container">
+  <form id="loan-form">
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="amount">Importe del préstamo ($)</label>
+        <input type="number" id="amount" name="amount" value="150000" required />
+      </div>
+
+      <div class="form-group">
+        <label for="years">Años</label>
+        <input type="number" id="years" name="years" value="30" required />
+      </div>
+
+      <div class="form-group">
+        <label for="interest">Interés Nominal Anual (%)</label>
+        <input type="number" id="interest" name="interest" step="0.01" value="3" required />
+      </div>
+
+      <div class="form-group">
+        <label for="opening-fee">Comisión de Apertura (%)</label>
+        <input type="number" id="opening-fee" name="opening-fee" step="0.01" value="0.5" />
+      </div>
+
+      <div class="form-group">
+        <label for="payment-period">Periodo de Pago</label>
+        <select id="payment-period" name="payment-period">
+          <option value="12">Mensual</option>
+          <option value="4">Trimestral</option>
+          <option value="2">Semestral</option>
+          <option value="1">Anual</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="amortization-type">Tipo de Amortización</label>
+        <select id="amortization-type" name="amortization-type">
+          <option value="french">Francés</option>
+          <option value="german">Alemán</option>
+          <option value="american">Americano</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="grace-period">Carencia (semestres)</label>
+        <input type="number" id="grace-period" name="grace-period" value="0" />
+      </div>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit">Calcular</button>
+        <button type="button" id="download-excel" disabled>Descargar Excel</button>
+    </div>
+  </form>
+
+  <div id="results" class="results-container">
+    <h2>Tabla de Amortización</h2>
+    <div id="table-container">
+        <!-- La tabla se generará aquí -->
+        <p>Introduce los datos y haz clic en "Calcular" para ver la tabla de amortización.</p>
+    </div>
+    <div id="summary" class="summary-container"></div>
+  </div>
+</div>
+
+<style>
+  :root {
+    --primary-color: #005ce6;
+    --secondary-color: #f0f6ff;
+    --text-color: #333;
+    --border-color: #d1d5db;
+    --background-color: #fff;
+    --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+
+  .calculator-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: var(--background-color);
+    border-radius: 8px;
+    box-shadow: var(--card-shadow);
+  }
+
+  h2 {
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--secondary-color);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .form-group label {
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-color);
+  }
+
+  .form-group input,
+  .form-group select {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 92, 230, 0.1);
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  button {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+  }
+
+  button[type="submit"] {
+    background-color: var(--primary-color);
+    color: white;
+  }
+
+  button[type="submit"]:hover {
+    background-color: #004ab3;
+  }
+    
+  button:active {
+      transform: scale(0.98);
+  }
+
+  button#download-excel {
+    background-color: #1d7f3f;
+    color: white;
+  }
+    
+  button#download-excel:hover {
+    background-color: #176331;
+  }
+
+  button:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+  }
+
+  .results-container {
+      margin-top: 2rem;
+  }
+  
+  #table-container {
+    overflow-x: auto;
+    max-height: 500px;
+    overflow-y: auto;
+    margin-top: 1rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  th, td {
+    padding: 0.75rem;
+    text-align: right;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  th {
+    background-color: var(--secondary-color);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+  }
+
+  tr:nth-child(even) {
+    background-color: #f9fafb;
+  }
+
+  td:first-child, th:first-child {
+      text-align: center;
+  }
+
+  .summary-container {
+      margin-top: 1.5rem;
+      padding: 1.5rem;
+      background-color: var(--secondary-color);
+      border-radius: 8px;
+  }
+</style>
+
+<script>
+    // @ts-nocheck
+    import { calculateAmortization } from '../logic/amortization.js';
+    import * as XLSX from 'xlsx';
+
+    const form = document.getElementById('loan-form');
+    const tableContainer = document.getElementById('table-container');
+    const summaryContainer = document.getElementById('summary');
+    const downloadButton = document.getElementById('download-excel');
+    
+    let amortizationTableData = [];
+
+    downloadButton.addEventListener('click', () => {
+        if (amortizationTableData.length === 0) {
+            alert('Primero debes calcular la tabla de amortización.');
+            return;
+        }
+
+        const formData = new FormData(form);
+        const options = {
+            amount: parseFloat(formData.get('amount')),
+            years: parseFloat(formData.get('years')),
+            interest: parseFloat(formData.get('interest')),
+            openingFee: parseFloat(formData.get('opening-fee') || 0),
+            paymentPeriod: parseInt(formData.get('payment-period')),
+            amortizationType: formData.get('amortization-type'),
+            gracePeriod: parseInt(formData.get('grace-period') || 0),
+        };
+
+        const totalInterest = amortizationTableData.reduce((acc, row) => acc + row.interest, 0);
+        const openingFeeAmount = options.amount * (options.openingFee / 100);
+        const totalPaid = amortizationTableData.reduce((acc, row) => acc + row.payment, 0);
+        const totalCost = totalPaid + openingFeeAmount;
+        
+        const summary = [
+            ["Resumen del Préstamo"],
+            ["Importe Préstamo", options.amount],
+            ["Años", options.years],
+            ["Interés Nominal", `${options.interest}%`],
+            ["Comisión Apertura", `${options.openingFee}%`],
+            ["Total Intereses", totalInterest],
+            ["Coste Total Préstamo", totalCost],
+            [] // Empty row for spacing
+        ];
+
+        const header = ["Periodo", "Cuota", "Intereses", "Amortización", "Capital Pendiente"];
+        const body = amortizationTableData.map(row => [
+            row.period,
+            row.payment,
+            row.interest,
+            row.principal,
+            row.remaining
+        ]);
+
+        const ws = XLSX.utils.aoa_to_sheet([summary[0], ...summary.slice(1), header, ...body]);
+        
+        // Style and format the sheet
+        ws['!cols'] = [ {wch:10}, {wch:15}, {wch:15}, {wch:15}, {wch:20} ];
+        
+        // Create a new workbook and append the sheet
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Amortización");
+        
+        // Trigger the download
+        XLSX.writeFile(wb, "tabla_amortizacion.xlsx");
+    });
+
+    const currencyFormatter = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+    });
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData(form);
+        const options = {
+            amount: parseFloat(formData.get('amount')),
+            years: parseFloat(formData.get('years')),
+            interest: parseFloat(formData.get('interest')),
+            openingFee: parseFloat(formData.get('opening-fee') || 0),
+            paymentPeriod: parseInt(formData.get('payment-period')),
+            amortizationType: formData.get('amortization-type'),
+            gracePeriod: parseInt(formData.get('grace-period') || 0),
+        };
+
+        amortizationTableData = calculateAmortization(options);
+        renderTable(amortizationTableData);
+        renderSummary(options, amortizationTableData);
+        downloadButton.disabled = false;
+    });
+
+    function renderTable(data) {
+        if (!data || data.length === 0) {
+            tableContainer.innerHTML = '<p>No se pudo generar la tabla. Revisa los datos o la implementación del método de amortización.</p>';
+            return;
+        }
+
+        const table = document.createElement('table');
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th>Periodo</th>
+                    <th>Cuota</th>
+                    <th>Intereses</th>
+                    <th>Amortización</th>
+                    <th>Capital Pendiente</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.map(row => `
+                    <tr>
+                        <td style="text-align: center;">${row.period}</td>
+                        <td>${currencyFormatter.format(row.payment)}</td>
+                        <td>${currencyFormatter.format(row.interest)}</td>
+                        <td>${currencyFormatter.format(row.principal)}</td>
+                        <td>${currencyFormatter.format(row.remaining)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        `;
+        tableContainer.innerHTML = '';
+        tableContainer.appendChild(table);
+    }
+    
+    function renderSummary(options, data) {
+        const totalInterest = data.reduce((acc, row) => acc + row.interest, 0);
+        const totalPaid = data.reduce((acc, row) => acc + row.payment, 0);
+        const openingFeeAmount = options.amount * (options.openingFee / 100);
+        const totalCost = totalPaid + openingFeeAmount;
+
+        summaryContainer.innerHTML = `
+            <h3>Resumen del Préstamo</h3>
+            <p><strong>Total de Intereses Pagados:</strong> ${currencyFormatter.format(totalInterest)}</p>
+            <p><strong>Comisión de Apertura:</strong> ${currencyFormatter.format(openingFeeAmount)} (${options.openingFee}%)</p>
+            <p><strong>Coste Total del Préstamo (Capital + Intereses + Comisiones):</strong> ${currencyFormatter.format(totalCost)}</p>
+        `;
+    }
+
+</script> 
