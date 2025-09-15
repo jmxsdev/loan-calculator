@@ -54,8 +54,18 @@
       </div>
 
       <div class="form-group">
-        <label for="grace-period">Carencia (semestres)</label>
-        <input type="number" id="grace-period" name="grace-period" value="0" />
+        <label for="grace-period-duration">Tiempo de Gracia</label>
+        <input type="number" id="grace-period-duration" name="grace-period-duration" value="0" />
+      </div>
+
+      <div class="form-group">
+        <label for="grace-period-unit">Unidad (Gracia)</label>
+        <select id="grace-period-unit" name="grace-period-unit">
+          <option value="months">Meses</option>
+          <option value="years">Años</option>
+          <option value="weeks">Semanas</option>
+          <option value="days">Días</option>
+        </select>
       </div>
 
       <div class="form-group">
@@ -283,17 +293,19 @@
             currency: 'USD',
         });
 
-        downloadButton.addEventListener('click', () => {
-            if (amortizationTableData.length === 0) {
-                alert('Primero debes calcular la tabla de amortización.');
-                return;
+        function convertToDays(duration, unit) {
+            switch (unit) {
+                case 'days': return duration;
+                case 'weeks': return duration * 7;
+                case 'months': return duration * 30.44; // Average days in a month
+                case 'years': return duration * 365.25; // Account for leap years
+                default: return 0;
             }
+        }
 
+        function getOptionsFromForm() {
             const formData = new FormData(form);
-            const durationUnitSelect = form.querySelector('#duration-unit');
-            const selectedUnitText = durationUnitSelect.options[durationUnitSelect.selectedIndex].text;
-
-            const options = {
+            return {
                 amount: parseFloat(formData.get('amount')),
                 duration: parseFloat(formData.get('duration')),
                 durationUnit: formData.get('duration-unit'),
@@ -301,10 +313,22 @@
                 openingFee: 5, // Hardcoded value
                 paymentPeriod: parseInt(formData.get('payment-period')),
                 amortizationType: formData.get('amortization-type'),
-                gracePeriod: parseInt(formData.get('grace-period') || 0),
+                gracePeriodDuration: parseInt(formData.get('grace-period-duration') || 0),
+                gracePeriodUnit: formData.get('grace-period-unit'),
                 deadPeriod: parseInt(formData.get('dead-period') || 0),
                 grantDate: formData.get('grant-date'),
             };
+        }
+
+        downloadButton.addEventListener('click', () => {
+            if (amortizationTableData.length === 0) {
+                alert('Primero debes calcular la tabla de amortización.');
+                return;
+            }
+
+            const options = getOptionsFromForm();
+            const durationUnitSelect = form.querySelector('#duration-unit');
+            const selectedUnitText = durationUnitSelect.options[durationUnitSelect.selectedIndex].text;
 
             const totalInterest = amortizationTableData.reduce((acc, row) => acc + row.interest, 0);
             const openingFeeAmount = options.amount * (options.openingFee / 100);
@@ -345,19 +369,16 @@
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             
-            const formData = new FormData(form);
-            const options = {
-                amount: parseFloat(formData.get('amount')),
-                duration: parseFloat(formData.get('duration')),
-                durationUnit: formData.get('duration-unit'),
-                interest: parseFloat(formData.get('interest')),
-                openingFee: 5, // Hardcoded value
-                paymentPeriod: parseInt(formData.get('payment-period')),
-                amortizationType: formData.get('amortization-type'),
-                gracePeriod: parseInt(formData.get('grace-period') || 0),
-                deadPeriod: parseInt(formData.get('dead-period') || 0),
-                grantDate: formData.get('grant-date'),
-            };
+            const options = getOptionsFromForm();
+
+            // Validation logic
+            const totalLoanDays = convertToDays(options.duration, options.durationUnit);
+            const gracePeriodDays = convertToDays(options.gracePeriodDuration, options.gracePeriodUnit);
+
+            if (gracePeriodDays > totalLoanDays) {
+                alert('El tiempo de gracia no puede ser mayor que la duración total del préstamo.');
+                return;
+            }
 
             amortizationTableData = calculateAmortization(options);
             renderTable(amortizationTableData);

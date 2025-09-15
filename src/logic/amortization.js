@@ -180,7 +180,8 @@ export function calculateAmortization(options) {
         interest,
         paymentPeriod,
         amortizationType,
-        gracePeriod,
+        gracePeriodDuration,
+        gracePeriodUnit,
         deadPeriod,
         grantDate,
     } = options;
@@ -202,12 +203,30 @@ export function calculateAmortization(options) {
             break;
     }
 
+    let gracePeriodInYears;
+    switch (gracePeriodUnit) {
+        case 'days':
+            gracePeriodInYears = gracePeriodDuration / 365;
+            break;
+        case 'weeks':
+            gracePeriodInYears = gracePeriodDuration / 52;
+            break;
+        case 'months':
+            gracePeriodInYears = gracePeriodDuration / 12;
+            break;
+        case 'years':
+        default:
+            gracePeriodInYears = gracePeriodDuration;
+            break;
+    }
+
     const periods = Math.round(totalYears * paymentPeriod);
     const ratePerPeriod = interest / 100 / paymentPeriod;
     
-    // Grace and Dead periods are in semesters, we need to convert to number of payments
+    const gracePeriodsInPayments = Math.round(gracePeriodInYears * paymentPeriod);
+
+    // Dead periods are in semesters, we need to convert to number of payments
     const monthsPerPayment = 12 / paymentPeriod;
-    const gracePeriodsInPayments = gracePeriod * (6 / monthsPerPayment);
     const deadPeriodsInPayments = deadPeriod * (6 / monthsPerPayment);
 
 
