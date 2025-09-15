@@ -10,8 +10,18 @@
       </div>
 
       <div class="form-group">
-        <label for="years">Años</label>
-        <input type="number" id="years" name="years" value="30" required />
+        <label for="duration">Duración</label>
+        <input type="number" id="duration" name="duration" value="30" required />
+      </div>
+
+      <div class="form-group">
+        <label for="duration-unit">Unidad</label>
+        <select id="duration-unit" name="duration-unit">
+          <option value="years">Años</option>
+          <option value="months">Meses</option>
+          <option value="weeks">Semanas</option>
+          <option value="days">Días</option>
+        </select>
       </div>
 
       <div class="form-group">
@@ -46,6 +56,16 @@
       <div class="form-group">
         <label for="grace-period">Carencia (semestres)</label>
         <input type="number" id="grace-period" name="grace-period" value="0" />
+      </div>
+
+      <div class="form-group">
+        <label for="dead-period">Tiempo Muerto (semestres)</label>
+        <input type="number" id="dead-period" name="dead-period" value="0" />
+      </div>
+
+      <div class="form-group">
+        <label for="grant-date">Fecha de Otorgamiento</label>
+        <input type="date" id="grant-date" name="grant-date" required />
       </div>
     </div>
 
@@ -220,6 +240,13 @@
     import { calculateAmortization } from '../logic/amortization.js';
     import * as XLSX from 'xlsx';
 
+    document.addEventListener('DOMContentLoaded', () => {
+        const grantDateInput = document.getElementById('grant-date');
+        if (grantDateInput) {
+            grantDateInput.value = new Date().toISOString().split('T')[0];
+        }
+    });
+
     const form = document.getElementById('loan-form');
     const tableContainer = document.getElementById('table-container');
     const summaryContainer = document.getElementById('summary');
@@ -234,14 +261,20 @@
         }
 
         const formData = new FormData(form);
+        const durationUnitSelect = form.querySelector('#duration-unit');
+        const selectedUnitText = durationUnitSelect.options[durationUnitSelect.selectedIndex].text;
+
         const options = {
             amount: parseFloat(formData.get('amount')),
-            years: parseFloat(formData.get('years')),
+            duration: parseFloat(formData.get('duration')),
+            durationUnit: formData.get('duration-unit'),
             interest: parseFloat(formData.get('interest')),
             openingFee: parseFloat(formData.get('opening-fee') || 0),
             paymentPeriod: parseInt(formData.get('payment-period')),
             amortizationType: formData.get('amortization-type'),
             gracePeriod: parseInt(formData.get('grace-period') || 0),
+            deadPeriod: parseInt(formData.get('dead-period') || 0),
+            grantDate: formData.get('grant-date'),
         };
 
         const totalInterest = amortizationTableData.reduce((acc, row) => acc + row.interest, 0);
@@ -252,7 +285,7 @@
         const summary = [
             ["Resumen del Préstamo"],
             ["Importe Préstamo", options.amount],
-            ["Años", options.years],
+            ["Duración", `${options.duration} ${selectedUnitText}`],
             ["Interés Nominal", `${options.interest}%`],
             ["Comisión Apertura", `${options.openingFee}%`],
             ["Total Intereses", totalInterest],
@@ -260,9 +293,10 @@
             [] // Empty row for spacing
         ];
 
-        const header = ["Periodo", "Cuota", "Intereses", "Amortización", "Capital Pendiente"];
+        const header = ["Periodo", "Fecha de Pago", "Cuota", "Intereses", "Amortización", "Capital Pendiente"];
         const body = amortizationTableData.map(row => [
             row.period,
+            new Date(row.paymentDate).toLocaleDateString(),
             row.payment,
             row.interest,
             row.principal,
@@ -271,14 +305,11 @@
 
         const ws = XLSX.utils.aoa_to_sheet([summary[0], ...summary.slice(1), header, ...body]);
         
-        // Style and format the sheet
-        ws['!cols'] = [ {wch:10}, {wch:15}, {wch:15}, {wch:15}, {wch:20} ];
+        ws['!cols'] = [ {wch:10}, {wch:15}, {wch:15}, {wch:15}, {wch:15}, {wch:20} ];
         
-        // Create a new workbook and append the sheet
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Amortización");
         
-        // Trigger the download
         XLSX.writeFile(wb, "tabla_amortizacion.xlsx");
     });
 
@@ -293,12 +324,15 @@
         const formData = new FormData(form);
         const options = {
             amount: parseFloat(formData.get('amount')),
-            years: parseFloat(formData.get('years')),
+            duration: parseFloat(formData.get('duration')),
+            durationUnit: formData.get('duration-unit'),
             interest: parseFloat(formData.get('interest')),
             openingFee: parseFloat(formData.get('opening-fee') || 0),
             paymentPeriod: parseInt(formData.get('payment-period')),
             amortizationType: formData.get('amortization-type'),
             gracePeriod: parseInt(formData.get('grace-period') || 0),
+            deadPeriod: parseInt(formData.get('dead-period') || 0),
+            grantDate: formData.get('grant-date'),
         };
 
         amortizationTableData = calculateAmortization(options);
@@ -318,6 +352,7 @@
             <thead>
                 <tr>
                     <th>Periodo</th>
+                    <th>Fecha de Pago</th>
                     <th>Cuota</th>
                     <th>Intereses</th>
                     <th>Amortización</th>
@@ -328,6 +363,7 @@
                 ${data.map(row => `
                     <tr>
                         <td style="text-align: center;">${row.period}</td>
+                        <td>${new Date(row.paymentDate).toLocaleDateString()}</td>
                         <td>${currencyFormatter.format(row.payment)}</td>
                         <td>${currencyFormatter.format(row.interest)}</td>
                         <td>${currencyFormatter.format(row.principal)}</td>
@@ -354,4 +390,4 @@
         `;
     }
 
-</script> 
+</script>
