@@ -9,12 +9,12 @@
         <input type="number" id="amount" name="amount" value="150000" required />
       </div>
 
-      <div class="form-group">
+      <div class="form-group regular-payment-field">
         <label for="duration">Duración</label>
         <input type="number" id="duration" name="duration" value="5" required />
       </div>
 
-      <div class="form-group">
+      <div class="form-group regular-payment-field">
         <label for="duration-unit">Unidad</label>
         <select id="duration-unit" name="duration-unit">
           <option value="years">Años</option>
@@ -34,9 +34,10 @@
         <p class="static-value">5</p>
       </div>
 
-      <div class="form-group">
+      <div class="form-group regular-payment-field">
         <label for="payment-period">Periodo de Pago</label>
         <select id="payment-period" name="payment-period">
+          <option value="365">Diario</option>
           <option value="12">Mensual</option>
           <option value="4">Trimestral</option>
           <option value="2" selected>Semestral</option>
@@ -50,15 +51,16 @@
           <option value="french">Francés</option>
           <option value="german">Alemán</option>
           <option value="american">Americano</option>
+          <option value="single">Pago Único</option>
         </select>
       </div>
 
-      <div class="form-group">
+      <div class="form-group regular-payment-field">
         <label for="grace-period-duration">Tiempo de Gracia</label>
         <input type="number" id="grace-period-duration" name="grace-period-duration" value="2" />
       </div>
 
-      <div class="form-group">
+      <div class="form-group regular-payment-field">
         <label for="grace-period-unit">Unidad (Gracia)</label>
         <select id="grace-period-unit" name="grace-period-unit">
           <option value="months">Meses</option>
@@ -68,12 +70,12 @@
         </select>
       </div>
 
-      <div class="form-group">
+      <div class="form-group regular-payment-field">
         <label for="dead-period-duration">Tiempo Muerto</label>
         <input type="number" id="dead-period-duration" name="dead-period-duration" value="1" />
       </div>
 
-      <div class="form-group">
+      <div class="form-group regular-payment-field">
         <label for="dead-period-unit">Unidad (T. Muerto)</label>
         <select id="dead-period-unit" name="dead-period-unit">
           <option value="years">Años</option>
@@ -86,6 +88,11 @@
       <div class="form-group">
         <label for="grant-date">Fecha de Otorgamiento</label>
         <input type="date" id="grant-date" name="grant-date" required />
+      </div>
+
+      <div class="form-group" id="single-payment-date-group" style="display: none;">
+        <label for="single-payment-date">Fecha de Pago Único</label>
+        <input type="date" id="single-payment-date" name="single-payment-date" />
       </div>
     </div>
 
@@ -295,13 +302,27 @@
         const tableContainer = document.getElementById('table-container');
         const summaryContainer = document.getElementById('summary');
         const downloadButton = document.getElementById('download-excel');
-        
+        const amortizationTypeSelect = document.getElementById('amortization-type');
+        const singlePaymentDateGroup = document.getElementById('single-payment-date-group');
+        const regularPaymentFields = form.querySelectorAll('.regular-payment-field');
+
         let amortizationTableData = [];
 
         const currencyFormatter = new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD',
         });
+
+        function toggleFields() {
+            const isSinglePayment = amortizationTypeSelect.value === 'single';
+            singlePaymentDateGroup.style.display = isSinglePayment ? 'flex' : 'none';
+            regularPaymentFields.forEach(field => {
+                field.style.display = isSinglePayment ? 'none' : 'flex';
+            });
+        }
+
+        amortizationTypeSelect.addEventListener('change', toggleFields);
+        toggleFields(); // Initial check
 
         function convertToDays(duration, unit) {
             if (!duration) return 0;
@@ -316,20 +337,27 @@
 
         function getOptionsFromForm() {
             const formData = new FormData(form);
-            return {
+            const amortizationType = formData.get('amortization-type');
+            const options = {
                 amount: parseFloat(formData.get('amount')),
-                duration: parseFloat(formData.get('duration')),
-                durationUnit: formData.get('duration-unit'),
                 interest: parseFloat(formData.get('interest')),
                 openingFee: 5, // Hardcoded value
-                paymentPeriod: parseInt(formData.get('payment-period')),
-                amortizationType: formData.get('amortization-type'),
-                gracePeriodDuration: parseInt(formData.get('grace-period-duration') || 0),
-                gracePeriodUnit: formData.get('grace-period-unit'),
-                deadPeriodDuration: parseInt(formData.get('dead-period-duration') || 0),
-                deadPeriodUnit: formData.get('dead-period-unit'),
+                amortizationType: amortizationType,
                 grantDate: formData.get('grant-date'),
             };
+
+            if (amortizationType === 'single') {
+                options.singlePaymentDate = formData.get('single-payment-date');
+            } else {
+                options.duration = parseFloat(formData.get('duration'));
+                options.durationUnit = formData.get('duration-unit');
+                options.paymentPeriod = parseInt(formData.get('payment-period'));
+                options.gracePeriodDuration = parseInt(formData.get('grace-period-duration') || 0);
+                options.gracePeriodUnit = formData.get('grace-period-unit');
+                options.deadPeriodDuration = parseInt(formData.get('dead-period-duration') || 0);
+                options.deadPeriodUnit = formData.get('dead-period-unit');
+            }
+            return options;
         }
 
         downloadButton.addEventListener('click', () => {
@@ -383,14 +411,15 @@
             
             const options = getOptionsFromForm();
 
-            // Validation logic
-            const totalLoanDays = convertToDays(options.duration, options.durationUnit);
-            const gracePeriodDays = convertToDays(options.gracePeriodDuration, options.gracePeriodUnit);
-            const deadPeriodDays = convertToDays(options.deadPeriodDuration, options.deadPeriodUnit);
+            if (options.amortizationType !== 'single') {
+                const totalLoanDays = convertToDays(options.duration, options.durationUnit);
+                const gracePeriodDays = convertToDays(options.gracePeriodDuration, options.gracePeriodUnit);
+                const deadPeriodDays = convertToDays(options.deadPeriodDuration, options.deadPeriodUnit);
 
-            if (gracePeriodDays + deadPeriodDays > totalLoanDays) {
-                alert('La suma del tiempo de gracia y el tiempo muerto no puede ser mayor que la duración total del préstamo.');
-                return;
+                if (gracePeriodDays + deadPeriodDays > totalLoanDays) {
+                    alert('La suma del tiempo de gracia y el tiempo muerto no puede ser mayor que la duración total del préstamo.');
+                    return;
+                }
             }
 
             amortizationTableData = calculateAmortization(options);

@@ -2,6 +2,10 @@
 
 function getNextPaymentDate(currentDate, paymentPeriod) {
     const date = new Date(currentDate);
+    if (paymentPeriod === 365) { // Daily payments
+        date.setDate(date.getDate() + 1);
+        return date;
+    }
     const monthsToAdd = 12 / paymentPeriod;
     date.setMonth(date.getMonth() + monthsToAdd);
     return date;
@@ -151,6 +155,35 @@ function calculateAmericanAmortization(amount, periods, ratePerPeriod, gracePeri
     return table;
 }
 
+function calculateSinglePayment(amount, interest, grantDate, singlePaymentDate) {
+    const startDate = new Date(grantDate);
+    const paymentDate = new Date(singlePaymentDate);
+
+    // Adjust for timezone offset to avoid off-by-one day errors
+    const timeZoneOffset = paymentDate.getTimezoneOffset() * 60000;
+    const adjustedPaymentDate = new Date(paymentDate.getTime() + timeZoneOffset);
+
+    const timeDiff = adjustedPaymentDate.getTime() - startDate.getTime();
+    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+    if (daysDiff <= 0) {
+        return []; // Or handle case where payment date is in the past/present
+    }
+
+    const dailyRate = interest / 100 / 365;
+    const totalInterest = amount * dailyRate * daysDiff;
+    const totalPayment = amount + totalInterest;
+
+    return [{
+        period: 1,
+        paymentDate: adjustedPaymentDate,
+        payment: totalPayment,
+        interest: totalInterest,
+        principal: amount,
+        remaining: 0,
+    }];
+}
+
 
 export function calculateAmortization(options) {
     const {
@@ -165,7 +198,12 @@ export function calculateAmortization(options) {
         deadPeriodDuration,
         deadPeriodUnit,
         grantDate,
+        singlePaymentDate,
     } = options;
+
+    if (amortizationType === 'single') {
+        return calculateSinglePayment(amount, interest, grantDate, singlePaymentDate);
+    }
 
     // Convert all durations to a consistent unit (years) for calculation
     let totalYears;
