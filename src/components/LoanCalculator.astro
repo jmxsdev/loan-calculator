@@ -30,8 +30,8 @@
       </div>
 
       <div class="form-group">
-        <label for="opening-fee">Comisión de Apertura (%)</label>
-        <input type="number" id="opening-fee" name="opening-fee" step="0.01" value="0.5" />
+        <label>Aporte / RS / JZ (%)</label>
+        <p class="static-value">5</p>
       </div>
 
       <div class="form-group">
@@ -74,6 +74,10 @@
         <button type="button" id="download-excel" disabled>Descargar Excel</button>
     </div>
   </form>
+
+  <div class="note-container">
+    <p><strong>Nota:</strong> El aporte corresponde al 3% de Responsabilidad Social y 2% a Juventud Zamorana.</p>
+  </div>
 
   <div id="results" class="results-container">
     <h2>Tabla de Amortización</h2>
@@ -138,6 +142,15 @@
     transition: border-color 0.2s, box-shadow 0.2s;
   }
 
+  .form-group .static-value {
+    padding: 0.75rem;
+    font-size: 1rem;
+    background-color: #f9fafb;
+    border-radius: 6px;
+    margin: 0;
+    border: 1px solid var(--border-color);
+  }
+
   .form-group input:focus,
   .form-group select:focus {
     outline: none;
@@ -187,6 +200,18 @@
   button:disabled {
     background-color: #9ca3af;
     cursor: not-allowed;
+  }
+
+  .note-container {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: var(--text-color);
+  }
+  .note-container p {
+    margin: 0;
   }
 
   .results-container {
@@ -245,149 +270,149 @@
         if (grantDateInput) {
             grantDateInput.value = new Date().toISOString().split('T')[0];
         }
-    });
 
-    const form = document.getElementById('loan-form');
-    const tableContainer = document.getElementById('table-container');
-    const summaryContainer = document.getElementById('summary');
-    const downloadButton = document.getElementById('download-excel');
-    
-    let amortizationTableData = [];
-
-    downloadButton.addEventListener('click', () => {
-        if (amortizationTableData.length === 0) {
-            alert('Primero debes calcular la tabla de amortización.');
-            return;
-        }
-
-        const formData = new FormData(form);
-        const durationUnitSelect = form.querySelector('#duration-unit');
-        const selectedUnitText = durationUnitSelect.options[durationUnitSelect.selectedIndex].text;
-
-        const options = {
-            amount: parseFloat(formData.get('amount')),
-            duration: parseFloat(formData.get('duration')),
-            durationUnit: formData.get('duration-unit'),
-            interest: parseFloat(formData.get('interest')),
-            openingFee: parseFloat(formData.get('opening-fee') || 0),
-            paymentPeriod: parseInt(formData.get('payment-period')),
-            amortizationType: formData.get('amortization-type'),
-            gracePeriod: parseInt(formData.get('grace-period') || 0),
-            deadPeriod: parseInt(formData.get('dead-period') || 0),
-            grantDate: formData.get('grant-date'),
-        };
-
-        const totalInterest = amortizationTableData.reduce((acc, row) => acc + row.interest, 0);
-        const openingFeeAmount = options.amount * (options.openingFee / 100);
-        const totalPaid = amortizationTableData.reduce((acc, row) => acc + row.payment, 0);
-        const totalCost = totalPaid + openingFeeAmount;
+        const form = document.getElementById('loan-form');
+        const tableContainer = document.getElementById('table-container');
+        const summaryContainer = document.getElementById('summary');
+        const downloadButton = document.getElementById('download-excel');
         
-        const summary = [
-            ["Resumen del Préstamo"],
-            ["Importe Préstamo", options.amount],
-            ["Duración", `${options.duration} ${selectedUnitText}`],
-            ["Interés Nominal", `${options.interest}%`],
-            ["Comisión Apertura", `${options.openingFee}%`],
-            ["Total Intereses", totalInterest],
-            ["Coste Total Préstamo", totalCost],
-            [] // Empty row for spacing
-        ];
+        let amortizationTableData = [];
 
-        const header = ["Periodo", "Fecha de Pago", "Cuota", "Intereses", "Amortización", "Capital Pendiente"];
-        const body = amortizationTableData.map(row => [
-            row.period,
-            new Date(row.paymentDate).toLocaleDateString(),
-            row.payment,
-            row.interest,
-            row.principal,
-            row.remaining
-        ]);
+        const currencyFormatter = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+        });
 
-        const ws = XLSX.utils.aoa_to_sheet([summary[0], ...summary.slice(1), header, ...body]);
-        
-        ws['!cols'] = [ {wch:10}, {wch:15}, {wch:15}, {wch:15}, {wch:15}, {wch:20} ];
-        
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Amortización");
-        
-        XLSX.writeFile(wb, "tabla_amortizacion.xlsx");
-    });
+        downloadButton.addEventListener('click', () => {
+            if (amortizationTableData.length === 0) {
+                alert('Primero debes calcular la tabla de amortización.');
+                return;
+            }
 
-    const currencyFormatter = new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-    });
+            const formData = new FormData(form);
+            const durationUnitSelect = form.querySelector('#duration-unit');
+            const selectedUnitText = durationUnitSelect.options[durationUnitSelect.selectedIndex].text;
 
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        
-        const formData = new FormData(form);
-        const options = {
-            amount: parseFloat(formData.get('amount')),
-            duration: parseFloat(formData.get('duration')),
-            durationUnit: formData.get('duration-unit'),
-            interest: parseFloat(formData.get('interest')),
-            openingFee: parseFloat(formData.get('opening-fee') || 0),
-            paymentPeriod: parseInt(formData.get('payment-period')),
-            amortizationType: formData.get('amortization-type'),
-            gracePeriod: parseInt(formData.get('grace-period') || 0),
-            deadPeriod: parseInt(formData.get('dead-period') || 0),
-            grantDate: formData.get('grant-date'),
-        };
+            const options = {
+                amount: parseFloat(formData.get('amount')),
+                duration: parseFloat(formData.get('duration')),
+                durationUnit: formData.get('duration-unit'),
+                interest: parseFloat(formData.get('interest')),
+                openingFee: 5, // Hardcoded value
+                paymentPeriod: parseInt(formData.get('payment-period')),
+                amortizationType: formData.get('amortization-type'),
+                gracePeriod: parseInt(formData.get('grace-period') || 0),
+                deadPeriod: parseInt(formData.get('dead-period') || 0),
+                grantDate: formData.get('grant-date'),
+            };
 
-        amortizationTableData = calculateAmortization(options);
-        renderTable(amortizationTableData);
-        renderSummary(options, amortizationTableData);
-        downloadButton.disabled = false;
-    });
+            const totalInterest = amortizationTableData.reduce((acc, row) => acc + row.interest, 0);
+            const openingFeeAmount = options.amount * (options.openingFee / 100);
+            const totalPaid = amortizationTableData.reduce((acc, row) => acc + row.payment, 0);
+            const totalCost = totalPaid + openingFeeAmount;
+            
+            const summary = [
+                ["Resumen del Préstamo"],
+                ["Importe Préstamo", options.amount],
+                ["Duración", `${options.duration} ${selectedUnitText}`],
+                ["Interés Nominal", `${options.interest}%`],
+                ["Aporte / RS / JZ", `${options.openingFee}%`],
+                ["Total Intereses", totalInterest],
+                ["Coste Total Préstamo", totalCost],
+                [] // Empty row for spacing
+            ];
 
-    function renderTable(data) {
-        if (!data || data.length === 0) {
-            tableContainer.innerHTML = '<p>No se pudo generar la tabla. Revisa los datos o la implementación del método de amortización.</p>';
-            return;
-        }
+            const header = ["Periodo", "Fecha de Pago", "Cuota", "Intereses", "Amortización", "Capital Pendiente"];
+            const body = amortizationTableData.map(row => [
+                row.period,
+                new Date(row.paymentDate).toLocaleDateString(),
+                row.payment,
+                row.interest,
+                row.principal,
+                row.remaining
+            ]);
 
-        const table = document.createElement('table');
-        table.innerHTML = `
-            <thead>
-                <tr>
-                    <th>Periodo</th>
-                    <th>Fecha de Pago</th>
-                    <th>Cuota</th>
-                    <th>Intereses</th>
-                    <th>Amortización</th>
-                    <th>Capital Pendiente</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${data.map(row => `
+            const ws = XLSX.utils.aoa_to_sheet([summary[0], ...summary.slice(1), header, ...body]);
+            
+            ws['!cols'] = [ {wch:10}, {wch:15}, {wch:15}, {wch:15}, {wch:15}, {wch:20} ];
+            
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Amortización");
+            
+            XLSX.writeFile(wb, "tabla_amortizacion.xlsx");
+        });
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            const options = {
+                amount: parseFloat(formData.get('amount')),
+                duration: parseFloat(formData.get('duration')),
+                durationUnit: formData.get('duration-unit'),
+                interest: parseFloat(formData.get('interest')),
+                openingFee: 5, // Hardcoded value
+                paymentPeriod: parseInt(formData.get('payment-period')),
+                amortizationType: formData.get('amortization-type'),
+                gracePeriod: parseInt(formData.get('grace-period') || 0),
+                deadPeriod: parseInt(formData.get('dead-period') || 0),
+                grantDate: formData.get('grant-date'),
+            };
+
+            amortizationTableData = calculateAmortization(options);
+            renderTable(amortizationTableData);
+            renderSummary(options, amortizationTableData);
+            downloadButton.disabled = false;
+        });
+
+        function renderTable(data) {
+            if (!data || data.length === 0) {
+                tableContainer.innerHTML = '<p>No se pudo generar la tabla. Revisa los datos o la implementación del método de amortización.</p>';
+                return;
+            }
+
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <thead>
                     <tr>
-                        <td style="text-align: center;">${row.period}</td>
-                        <td>${new Date(row.paymentDate).toLocaleDateString()}</td>
-                        <td>${currencyFormatter.format(row.payment)}</td>
-                        <td>${currencyFormatter.format(row.interest)}</td>
-                        <td>${currencyFormatter.format(row.principal)}</td>
-                        <td>${currencyFormatter.format(row.remaining)}</td>
+                        <th>Periodo</th>
+                        <th>Fecha de Pago</th>
+                        <th>Cuota</th>
+                        <th>Intereses</th>
+                        <th>Amortización</th>
+                        <th>Capital Pendiente</th>
                     </tr>
-                `).join('')}
-            </tbody>
-        `;
-        tableContainer.innerHTML = '';
-        tableContainer.appendChild(table);
-    }
-    
-    function renderSummary(options, data) {
-        const totalInterest = data.reduce((acc, row) => acc + row.interest, 0);
-        const totalPaid = data.reduce((acc, row) => acc + row.payment, 0);
-        const openingFeeAmount = options.amount * (options.openingFee / 100);
-        const totalCost = totalPaid + openingFeeAmount;
+                </thead>
+                <tbody>
+                    ${data.map(row => `
+                        <tr>
+                            <td style="text-align: center;">${row.period}</td>
+                            <td>${new Date(row.paymentDate).toLocaleDateString()}</td>
+                            <td>${currencyFormatter.format(row.payment)}</td>
+                            <td>${currencyFormatter.format(row.interest)}</td>
+                            <td>${currencyFormatter.format(row.principal)}</td>
+                            <td>${currencyFormatter.format(row.remaining)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            `;
+            tableContainer.innerHTML = '';
+            tableContainer.appendChild(table);
+        }
+        
+        function renderSummary(options, data) {
+            const totalInterest = data.reduce((acc, row) => acc + row.interest, 0);
+            const totalPaid = data.reduce((acc, row) => acc + row.payment, 0);
+            const openingFeeAmount = options.amount * (options.openingFee / 100);
+            const totalCost = totalPaid + openingFeeAmount;
 
-        summaryContainer.innerHTML = `
-            <h3>Resumen del Préstamo</h3>
-            <p><strong>Total de Intereses Pagados:</strong> ${currencyFormatter.format(totalInterest)}</p>
-            <p><strong>Comisión de Apertura:</strong> ${currencyFormatter.format(openingFeeAmount)} (${options.openingFee}%)</p>
-            <p><strong>Coste Total del Préstamo (Capital + Intereses + Comisiones):</strong> ${currencyFormatter.format(totalCost)}</p>
-        `;
-    }
+            summaryContainer.innerHTML = `
+                <h3>Resumen del Préstamo</h3>
+                <p><strong>Total de Intereses Pagados:</strong> ${currencyFormatter.format(totalInterest)}</p>
+                <p><strong>Aporte / RS / JZ:</strong> ${currencyFormatter.format(openingFeeAmount)} (${options.openingFee}%)</p>
+                <p><strong>Coste Total del Préstamo (Capital + Intereses + Aportes):</strong> ${currencyFormatter.format(totalCost)}</p>
+            `;
+        }
+    });
 
 </script>
