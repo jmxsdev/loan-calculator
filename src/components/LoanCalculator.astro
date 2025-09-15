@@ -11,7 +11,7 @@
 
       <div class="form-group">
         <label for="duration">Duración</label>
-        <input type="number" id="duration" name="duration" value="30" required />
+        <input type="number" id="duration" name="duration" value="5" required />
       </div>
 
       <div class="form-group">
@@ -39,7 +39,7 @@
         <select id="payment-period" name="payment-period">
           <option value="12">Mensual</option>
           <option value="4">Trimestral</option>
-          <option value="2">Semestral</option>
+          <option value="2" selected>Semestral</option>
           <option value="1">Anual</option>
         </select>
       </div>
@@ -55,7 +55,7 @@
 
       <div class="form-group">
         <label for="grace-period-duration">Tiempo de Gracia</label>
-        <input type="number" id="grace-period-duration" name="grace-period-duration" value="0" />
+        <input type="number" id="grace-period-duration" name="grace-period-duration" value="2" />
       </div>
 
       <div class="form-group">
@@ -69,8 +69,18 @@
       </div>
 
       <div class="form-group">
-        <label for="dead-period">Tiempo Muerto (semestres)</label>
-        <input type="number" id="dead-period" name="dead-period" value="0" />
+        <label for="dead-period-duration">Tiempo Muerto</label>
+        <input type="number" id="dead-period-duration" name="dead-period-duration" value="1" />
+      </div>
+
+      <div class="form-group">
+        <label for="dead-period-unit">Unidad (T. Muerto)</label>
+        <select id="dead-period-unit" name="dead-period-unit">
+          <option value="years">Años</option>
+          <option value="months">Meses</option>
+          <option value="weeks">Semanas</option>
+          <option value="days">Días</option>
+        </select>
       </div>
 
       <div class="form-group">
@@ -294,6 +304,7 @@
         });
 
         function convertToDays(duration, unit) {
+            if (!duration) return 0;
             switch (unit) {
                 case 'days': return duration;
                 case 'weeks': return duration * 7;
@@ -315,7 +326,8 @@
                 amortizationType: formData.get('amortization-type'),
                 gracePeriodDuration: parseInt(formData.get('grace-period-duration') || 0),
                 gracePeriodUnit: formData.get('grace-period-unit'),
-                deadPeriod: parseInt(formData.get('dead-period') || 0),
+                deadPeriodDuration: parseInt(formData.get('dead-period-duration') || 0),
+                deadPeriodUnit: formData.get('dead-period-unit'),
                 grantDate: formData.get('grant-date'),
             };
         }
@@ -374,9 +386,10 @@
             // Validation logic
             const totalLoanDays = convertToDays(options.duration, options.durationUnit);
             const gracePeriodDays = convertToDays(options.gracePeriodDuration, options.gracePeriodUnit);
+            const deadPeriodDays = convertToDays(options.deadPeriodDuration, options.deadPeriodUnit);
 
-            if (gracePeriodDays > totalLoanDays) {
-                alert('El tiempo de gracia no puede ser mayor que la duración total del préstamo.');
+            if (gracePeriodDays + deadPeriodDays > totalLoanDays) {
+                alert('La suma del tiempo de gracia y el tiempo muerto no puede ser mayor que la duración total del préstamo.');
                 return;
             }
 

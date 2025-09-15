@@ -11,9 +11,8 @@ function calculateFrenchAmortization(amount, periods, ratePerPeriod, gracePeriod
     const table = [];
     let remainingAmount = amount;
     let paymentDate = new Date(grantDate);
-    const periodsAfterGrace = periods - gracePeriods;
-
-    // Dead Period Calculation
+    
+    // Dead Period Calculation (no payments)
     for (let i = 1; i <= deadPeriods; i++) {
         paymentDate = getNextPaymentDate(paymentDate, paymentPeriod);
         table.push({
@@ -26,7 +25,7 @@ function calculateFrenchAmortization(amount, periods, ratePerPeriod, gracePeriod
         });
     }
     
-    // Grace Period Calculation
+    // Grace Period Calculation (interest-only payments)
     for (let i = 1; i <= gracePeriods; i++) {
         paymentDate = getNextPaymentDate(paymentDate, paymentPeriod);
         const interest = remainingAmount * ratePerPeriod;
@@ -40,12 +39,13 @@ function calculateFrenchAmortization(amount, periods, ratePerPeriod, gracePeriod
         });
     }
 
-    // Regular French Amortization
-    const monthlyPayment = gracePeriods < periods 
-        ? amount * (ratePerPeriod * Math.pow(1 + ratePerPeriod, periodsAfterGrace)) / (Math.pow(1 + ratePerPeriod, periodsAfterGrace) - 1)
+    // Regular French Amortization (principal + interest)
+    const regularPaymentPeriods = periods - gracePeriods - deadPeriods;
+    const monthlyPayment = regularPaymentPeriods > 0 
+        ? amount * (ratePerPeriod * Math.pow(1 + ratePerPeriod, regularPaymentPeriods)) / (Math.pow(1 + ratePerPeriod, regularPaymentPeriods) - 1)
         : 0;
 
-    for (let i = 1; i <= periodsAfterGrace; i++) {
+    for (let i = 1; i <= regularPaymentPeriods; i++) {
         paymentDate = getNextPaymentDate(paymentDate, paymentPeriod);
         const interest = remainingAmount * ratePerPeriod;
         const principal = monthlyPayment - interest;
@@ -68,40 +68,26 @@ function calculateGermanAmortization(amount, periods, ratePerPeriod, gracePeriod
     const table = [];
     let remainingAmount = amount;
     let paymentDate = new Date(grantDate);
-    const periodsAfterGrace = periods - gracePeriods;
+    const regularPaymentPeriods = periods - gracePeriods - deadPeriods;
 
-    // Dead Period Calculation
+    // Dead Period
     for (let i = 1; i <= deadPeriods; i++) {
         paymentDate = getNextPaymentDate(paymentDate, paymentPeriod);
-        table.push({
-            period: i,
-            paymentDate: new Date(paymentDate),
-            payment: 0,
-            interest: 0,
-            principal: 0,
-            remaining: remainingAmount
-        });
+        table.push({ period: i, paymentDate: new Date(paymentDate), payment: 0, interest: 0, principal: 0, remaining: remainingAmount });
     }
 
-    // Grace Period Calculation
+    // Grace Period
     for (let i = 1; i <= gracePeriods; i++) {
         paymentDate = getNextPaymentDate(paymentDate, paymentPeriod);
         const interest = remainingAmount * ratePerPeriod;
-        table.push({
-            period: deadPeriods + i,
-            paymentDate: new Date(paymentDate),
-            payment: interest,
-            interest: interest,
-            principal: 0,
-            remaining: remainingAmount
-        });
+        table.push({ period: deadPeriods + i, paymentDate: new Date(paymentDate), payment: interest, interest: interest, principal: 0, remaining: remainingAmount });
     }
 
-    if (periodsAfterGrace <= 0 && gracePeriods > 0) return table;
+    if (regularPaymentPeriods <= 0) return table;
     
-    const principalPerPeriod = amount / periodsAfterGrace;
+    const principalPerPeriod = amount / regularPaymentPeriods;
 
-    for (let i = 1; i <= periodsAfterGrace; i++) {
+    for (let i = 1; i <= regularPaymentPeriods; i++) {
         paymentDate = getNextPaymentDate(paymentDate, paymentPeriod);
         const interest = remainingAmount * ratePerPeriod;
         const payment = principalPerPeriod + interest;
@@ -125,23 +111,18 @@ function calculateAmericanAmortization(amount, periods, ratePerPeriod, gracePeri
     let remainingAmount = amount;
     let paymentDate = new Date(grantDate);
 
-    // Dead Period Calculation
+    // Dead Period (no payments)
     for (let i = 1; i <= deadPeriods; i++) {
         paymentDate = getNextPaymentDate(paymentDate, paymentPeriod);
-        table.push({
-            period: i,
-            paymentDate: new Date(paymentDate),
-            payment: 0,
-            interest: 0,
-            principal: 0,
-            remaining: remainingAmount,
-        });
+        table.push({ period: i, paymentDate: new Date(paymentDate), payment: 0, interest: 0, principal: 0, remaining: remainingAmount });
     }
 
     const interestPayment = amount * ratePerPeriod;
+    // In American system, grace period is indistinguishable from regular periods, all are interest-only.
+    const interestOnlyPaymentPeriods = periods - deadPeriods - 1;
 
     // Interest-only periods
-    for (let i = 1; i < periods; i++) {
+    for (let i = 1; i <= interestOnlyPaymentPeriods; i++) {
         paymentDate = getNextPaymentDate(paymentDate, paymentPeriod);
         table.push({
             period: deadPeriods + i,
@@ -153,18 +134,17 @@ function calculateAmericanAmortization(amount, periods, ratePerPeriod, gracePeri
         });
     }
 
-    // Last period
-    if (periods > 0) {
+    // Last period (principal + interest)
+    if (periods - deadPeriods > 0) {
         paymentDate = getNextPaymentDate(paymentDate, paymentPeriod);
         const lastPayment = interestPayment + amount;
-        remainingAmount = 0;
         table.push({
-            period: deadPeriods + periods,
+            period: periods,
             paymentDate: new Date(paymentDate),
             payment: lastPayment,
             interest: interestPayment,
             principal: amount,
-            remaining: remainingAmount,
+            remaining: 0,
         });
     }
 
@@ -182,53 +162,42 @@ export function calculateAmortization(options) {
         amortizationType,
         gracePeriodDuration,
         gracePeriodUnit,
-        deadPeriod,
+        deadPeriodDuration,
+        deadPeriodUnit,
         grantDate,
     } = options;
 
+    // Convert all durations to a consistent unit (years) for calculation
     let totalYears;
     switch (durationUnit) {
-        case 'days':
-            totalYears = duration / 365;
-            break;
-        case 'weeks':
-            totalYears = duration / 52;
-            break;
-        case 'months':
-            totalYears = duration / 12;
-            break;
-        case 'years':
-        default:
-            totalYears = duration;
-            break;
+        case 'days': totalYears = duration / 365; break;
+        case 'weeks': totalYears = duration / 52; break;
+        case 'months': totalYears = duration / 12; break;
+        default: totalYears = duration; break;
     }
 
     let gracePeriodInYears;
     switch (gracePeriodUnit) {
-        case 'days':
-            gracePeriodInYears = gracePeriodDuration / 365;
-            break;
-        case 'weeks':
-            gracePeriodInYears = gracePeriodDuration / 52;
-            break;
-        case 'months':
-            gracePeriodInYears = gracePeriodDuration / 12;
-            break;
-        case 'years':
-        default:
-            gracePeriodInYears = gracePeriodDuration;
-            break;
+        case 'days': gracePeriodInYears = gracePeriodDuration / 365; break;
+        case 'weeks': gracePeriodInYears = gracePeriodDuration / 52; break;
+        case 'months': gracePeriodInYears = gracePeriodDuration / 12; break;
+        default: gracePeriodInYears = gracePeriodDuration; break;
     }
 
+    let deadPeriodInYears;
+    switch (deadPeriodUnit) {
+        case 'days': deadPeriodInYears = deadPeriodDuration / 365; break;
+        case 'weeks': deadPeriodInYears = deadPeriodDuration / 52; break;
+        case 'months': deadPeriodInYears = deadPeriodDuration / 12; break;
+        default: deadPeriodInYears = deadPeriodDuration; break;
+    }
+
+    // Calculate total number of payment periods for the loan's lifetime
     const periods = Math.round(totalYears * paymentPeriod);
-    const ratePerPeriod = interest / 100 / paymentPeriod;
-    
     const gracePeriodsInPayments = Math.round(gracePeriodInYears * paymentPeriod);
+    const deadPeriodsInPayments = Math.round(deadPeriodInYears * paymentPeriod);
 
-    // Dead periods are in semesters, we need to convert to number of payments
-    const monthsPerPayment = 12 / paymentPeriod;
-    const deadPeriodsInPayments = deadPeriod * (6 / monthsPerPayment);
-
+    const ratePerPeriod = interest / 100 / paymentPeriod;
 
     switch (amortizationType) {
         case 'french':
