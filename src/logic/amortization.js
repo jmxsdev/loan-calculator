@@ -184,6 +184,27 @@ function calculateSinglePayment(amount, interest, grantDate, singlePaymentDate) 
     }];
 }
 
+function distributeOpeningFee(table, amount, openingFee) {
+    if (!openingFee || openingFee <= 0) {
+        return table;
+    }
+
+    const openingFeeAmount = amount * (openingFee / 100);
+    const principalPayments = table.filter(row => row.principal > 0);
+    
+    if (principalPayments.length === 0) {
+        return table;
+    }
+
+    const feePerPayment = openingFeeAmount / principalPayments.length;
+
+    return table.map(row => {
+        if (row.principal > 0) {
+            return { ...row, payment: row.payment + feePerPayment };
+        }
+        return row;
+    });
+}
 
 export function calculateAmortization(options) {
     const {
@@ -199,10 +220,12 @@ export function calculateAmortization(options) {
         deadPeriodUnit,
         grantDate,
         singlePaymentDate,
+        openingFee,
     } = options;
 
     if (amortizationType === 'single') {
-        return calculateSinglePayment(amount, interest, grantDate, singlePaymentDate);
+        const table = calculateSinglePayment(amount, interest, grantDate, singlePaymentDate);
+        return distributeOpeningFee(table, amount, openingFee);
     }
 
     // Convert all durations to a consistent unit (years) for calculation
@@ -237,14 +260,20 @@ export function calculateAmortization(options) {
 
     const ratePerPeriod = interest / 100 / paymentPeriod;
 
+    let table;
     switch (amortizationType) {
         case 'french':
-            return calculateFrenchAmortization(amount, periods, ratePerPeriod, gracePeriodsInPayments, deadPeriodsInPayments, grantDate, paymentPeriod);
+            table = calculateFrenchAmortization(amount, periods, ratePerPeriod, gracePeriodsInPayments, deadPeriodsInPayments, grantDate, paymentPeriod);
+            break;
         case 'german':
-            return calculateGermanAmortization(amount, periods, ratePerPeriod, gracePeriodsInPayments, deadPeriodsInPayments, grantDate, paymentPeriod);
+            table = calculateGermanAmortization(amount, periods, ratePerPeriod, gracePeriodsInPayments, deadPeriodsInPayments, grantDate, paymentPeriod);
+            break;
         case 'american':
-            return calculateAmericanAmortization(amount, periods, ratePerPeriod, gracePeriodsInPayments, deadPeriodsInPayments, grantDate, paymentPeriod);
+            table = calculateAmericanAmortization(amount, periods, ratePerPeriod, gracePeriodsInPayments, deadPeriodsInPayments, grantDate, paymentPeriod);
+            break;
         default:
             throw new Error(`Unknown amortization type: ${amortizationType}`);
     }
+
+    return distributeOpeningFee(table, amount, openingFee);
 }

@@ -90,9 +90,19 @@
         <input type="date" id="grant-date" name="grant-date" required />
       </div>
 
-      <div class="form-group" id="single-payment-date-group" style="display: none;">
-        <label for="single-payment-date">Fecha de Pago Único</label>
-        <input type="date" id="single-payment-date" name="single-payment-date" />
+      <div id="single-payment-fields" style="display: none;">
+        <div class="form-group">
+          <label for="single-payment-duration">Período de Pago Único</label>
+          <input type="number" id="single-payment-duration" name="single-payment-duration" value="100" />
+        </div>
+        <div class="form-group">
+          <label for="single-payment-unit">Unidad</label>
+          <select id="single-payment-unit" name="single-payment-unit">
+            <option value="days">Días</option>
+            <option value="months">Meses</option>
+            <option value="years">Años</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -117,6 +127,9 @@
 </div>
 
 <style>
+  #single-payment-fields {
+    display: contents; /* Allows grid layout to apply to children */
+  }
   :root {
     --primary-color: #005ce6;
     --secondary-color: #f0f6ff;
@@ -303,7 +316,7 @@
         const summaryContainer = document.getElementById('summary');
         const downloadButton = document.getElementById('download-excel');
         const amortizationTypeSelect = document.getElementById('amortization-type');
-        const singlePaymentDateGroup = document.getElementById('single-payment-date-group');
+        const singlePaymentFields = document.getElementById('single-payment-fields');
         const regularPaymentFields = form.querySelectorAll('.regular-payment-field');
 
         let amortizationTableData = [];
@@ -315,7 +328,8 @@
 
         function toggleFields() {
             const isSinglePayment = amortizationTypeSelect.value === 'single';
-            singlePaymentDateGroup.style.display = isSinglePayment ? 'flex' : 'none';
+            // Use 'display: contents' to make the wrapper div transparent to the grid layout
+            singlePaymentFields.style.display = isSinglePayment ? 'contents' : 'none';
             regularPaymentFields.forEach(field => {
                 field.style.display = isSinglePayment ? 'none' : 'flex';
             });
@@ -347,7 +361,27 @@
             };
 
             if (amortizationType === 'single') {
-                options.singlePaymentDate = formData.get('single-payment-date');
+                const grantDate = new Date(options.grantDate);
+                const singlePaymentDuration = parseInt(formData.get('single-payment-duration'));
+                const singlePaymentUnit = formData.get('single-payment-unit');
+
+                const finalDate = new Date(grantDate);
+                // Adjust for timezone issues by working with UTC dates
+                finalDate.setUTCDate(grantDate.getUTCDate());
+
+                switch (singlePaymentUnit) {
+                    case 'days':
+                        finalDate.setUTCDate(grantDate.getUTCDate() + singlePaymentDuration);
+                        break;
+                    case 'months':
+                        finalDate.setUTCMonth(grantDate.getUTCMonth() + singlePaymentDuration);
+                        break;
+                    case 'years':
+                        finalDate.setUTCFullYear(grantDate.getUTCFullYear() + singlePaymentDuration);
+                        break;
+                }
+
+                options.singlePaymentDate = finalDate.toISOString().split('T')[0];
             } else {
                 options.duration = parseFloat(formData.get('duration'));
                 options.durationUnit = formData.get('duration-unit');
@@ -371,9 +405,7 @@
             const selectedUnitText = durationUnitSelect.options[durationUnitSelect.selectedIndex].text;
 
             const totalInterest = amortizationTableData.reduce((acc, row) => acc + row.interest, 0);
-            const openingFeeAmount = options.amount * (options.openingFee / 100);
             const totalPaid = amortizationTableData.reduce((acc, row) => acc + row.payment, 0);
-            const totalCost = totalPaid + openingFeeAmount;
             
             const summary = [
                 ["Resumen del Préstamo"],
@@ -382,7 +414,7 @@
                 ["Interés Nominal", `${options.interest}%`],
                 ["Aporte / RS / JZ", `${options.openingFee}%`],
                 ["Total Intereses", totalInterest],
-                ["Coste Total Préstamo", totalCost],
+                ["Coste Total Préstamo", totalPaid],
                 [] // Empty row for spacing
             ];
 
@@ -467,13 +499,12 @@
             const totalInterest = data.reduce((acc, row) => acc + row.interest, 0);
             const totalPaid = data.reduce((acc, row) => acc + row.payment, 0);
             const openingFeeAmount = options.amount * (options.openingFee / 100);
-            const totalCost = totalPaid + openingFeeAmount;
 
             summaryContainer.innerHTML = `
                 <h3>Resumen del Préstamo</h3>
                 <p><strong>Total de Intereses Pagados:</strong> ${currencyFormatter.format(totalInterest)}</p>
                 <p><strong>Aporte / RS / JZ:</strong> ${currencyFormatter.format(openingFeeAmount)} (${options.openingFee}%)</p>
-                <p><strong>Coste Total del Préstamo (Capital + Intereses + Aportes):</strong> ${currencyFormatter.format(totalCost)}</p>
+                <p><strong>Coste Total del Préstamo (Capital + Intereses + Aportes):</strong> ${currencyFormatter.format(totalPaid)}</p>
             `;
         }
     });
