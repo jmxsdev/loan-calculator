@@ -420,8 +420,8 @@
                 ["Duración", `${options.duration} ${selectedUnitText}`],
                 ["Interés Nominal", `${options.interest}%`],
                 ["Aporte / RS / JZ", `${options.openingFee}%`],
-                ["Total Intereses", totalInterest],
-                ["Coste Total Préstamo", totalPaid],
+                ["Total Intereses", parseFloat(totalInterest.toFixed(2))],
+                ["Coste Total Préstamo", parseFloat(totalPaid.toFixed(2))],
                 [] // Empty row for spacing
             ];
 
@@ -429,10 +429,10 @@
             const body = amortizationTableData.map(row => [
                 row.period,
                 new Date(row.paymentDate).toLocaleDateString(),
-                row.payment,
-                row.interest,
-                row.principal,
-                row.remaining
+                parseFloat(row.payment.toFixed(2)),
+                parseFloat(row.interest.toFixed(2)),
+                parseFloat(row.principal.toFixed(2)),
+                parseFloat(row.remaining.toFixed(2))
             ]);
 
             const ws = XLSX.utils.aoa_to_sheet([summary[0], ...summary.slice(1), header, ...body]);
