@@ -25,7 +25,7 @@
       </div>
 
       <div class="form-group">
-        <label for="interest">Interés Nominal Anual (%)</label>
+        <label for="interest" id="interest-label">Interés Nominal Anual (%)</label>
         <input type="number" id="interest" name="interest" step="0.01" value="3" required />
       </div>
 
@@ -318,6 +318,7 @@
         const amortizationTypeSelect = document.getElementById('amortization-type');
         const singlePaymentFields = document.getElementById('single-payment-fields');
         const regularPaymentFields = form.querySelectorAll('.regular-payment-field');
+        const interestLabel = document.getElementById('interest-label');
 
         let amortizationTableData = [];
 
@@ -333,6 +334,12 @@
             regularPaymentFields.forEach(field => {
                 field.style.display = isSinglePayment ? 'none' : 'flex';
             });
+
+            if (isSinglePayment) {
+                interestLabel.textContent = 'Interés Fijo (%)';
+            } else {
+                interestLabel.textContent = 'Interés Nominal Anual (%)';
+            }
         }
 
         amortizationTypeSelect.addEventListener('change', toggleFields);

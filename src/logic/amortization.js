@@ -170,8 +170,8 @@ function calculateSinglePayment(amount, interest, grantDate, singlePaymentDate) 
         return []; // Or handle case where payment date is in the past/present
     }
 
-    const dailyRate = interest / 100 / 365;
-    const totalInterest = amount * dailyRate * daysDiff;
+    // For single payment, 'interest' is a fixed percentage of the amount
+    const totalInterest = amount * (interest / 100);
     const totalPayment = amount + totalInterest;
 
     return [{
