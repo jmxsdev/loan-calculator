@@ -122,14 +122,26 @@ function calculateAmericanAmortization(amount, periods, ratePerPeriod, gracePeri
     }
 
     const interestPayment = amount * ratePerPeriod;
-    // In American system, grace period is indistinguishable from regular periods, all are interest-only.
-    const interestOnlyPaymentPeriods = periods - deadPeriods - 1;
+    const regularPaymentPeriods = periods - gracePeriods - deadPeriods;
 
-    // Interest-only periods
-    for (let i = 1; i <= interestOnlyPaymentPeriods; i++) {
+    // Grace Period (interest-only payments)
+    for (let i = 1; i <= gracePeriods; i++) {
         paymentDate = getNextPaymentDate(paymentDate, paymentPeriod);
         table.push({
             period: deadPeriods + i,
+            paymentDate: new Date(paymentDate),
+            payment: interestPayment,
+            interest: interestPayment,
+            principal: 0,
+            remaining: remainingAmount
+        });
+    }
+
+    // Regular periods are also interest-only, up to the last one
+    for (let i = 1; i < regularPaymentPeriods; i++) {
+        paymentDate = getNextPaymentDate(paymentDate, paymentPeriod);
+        table.push({
+            period: deadPeriods + gracePeriods + i,
             paymentDate: new Date(paymentDate),
             payment: interestPayment,
             interest: interestPayment,
@@ -139,7 +151,7 @@ function calculateAmericanAmortization(amount, periods, ratePerPeriod, gracePeri
     }
 
     // Last period (principal + interest)
-    if (periods - deadPeriods > 0) {
+    if (regularPaymentPeriods > 0) {
         paymentDate = getNextPaymentDate(paymentDate, paymentPeriod);
         const lastPayment = interestPayment + amount;
         table.push({
