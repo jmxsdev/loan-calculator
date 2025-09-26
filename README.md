@@ -32,23 +32,23 @@ El proyecto está construido con [Astro](https://astro.build/) y sigue una estru
 ```mermaid
 graph TD
     subgraph "Cliente (Navegador)"
-        A[LoanCalculator.astro] --> B{Formulario de Préstamo};
-        B --> C{Script del Componente};
+        A["LoanCalculator.astro"] --> B{"Formulario de Préstamo"};
+        B --> C{"Script del Componente"};
     end
 
     subgraph "Lógica de Negocio (JavaScript)"
-        C --> D[amortization.js];
-        C --> E[excel-report.js];
+        C --> D["amortization.js"];
+        C --> E["excel-report.js"];
     end
 
     subgraph "Salida"
-        D --> F[Tabla de Amortización HTML];
-        E --> G[Archivo Excel (.xlsx)];
+        D --> F["Tabla de Amortización HTML"];
+        E --> G["Archivo Excel (.xlsx)"];
     end
 
-    A -- Contiene --> B;
-    A -- Contiene --> C;
-    A -- Muestra --> F;
+    A -->|Contiene| B;
+    A -->|Contiene| C;
+    A -->|Muestra| F;
 ```
 
 ## Diagrama de Flujo del Proyecto
@@ -57,18 +57,18 @@ El flujo de usuario y de datos es el siguiente:
 
 ```mermaid
 graph LR
-    A[Usuario abre la página] --> B{Introduce datos del préstamo};
-    B --> C{Selecciona tipo de amortización};
-    C --> D{Clic en "Calcular"};
-    D --> E[Script valida datos];
-    E -- Datos Válidos --> F[Llama a `calculateAmortization`];
-    F --> G[Se genera la tabla de datos];
-    G --> H[Se renderiza la tabla en HTML];
-    H --> I{Usuario ve resultados};
-    I --> J{Clic en "Descargar Excel"};
-    J --> K[Llama a `generateExcelReport`];
-    K --> L[Se crea y descarga el archivo .xlsx];
-    E -- Datos Inválidos --> M[Muestra alerta de error];
+    A["Usuario abre la página"] --> B{"Introduce datos del préstamo"};
+    B --> C{"Selecciona tipo de amortización"};
+    C --> D{"Clic en \"Calcular\""};
+    D --> E["Script valida datos"];
+    E -- Datos Válidos --> F["Llama a `calculateAmortization`"];
+    F --> G["Se genera la tabla de datos"];
+    G --> H["Se renderiza la tabla en HTML"];
+    H --> I{"Usuario ve resultados"};
+    I --> J{"Clic en \"Descargar Excel\""};
+    J --> K["Llama a `generateExcelReport`"];
+    K --> L["Se crea y descarga el archivo .xlsx"];
+    E -- Datos Inválidos --> M["Muestra alerta de error"];
 ```
 
 ## Instalación y Uso
