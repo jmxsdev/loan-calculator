@@ -97,75 +97,14 @@ graph LR
 
 ## Testing
 
-Para asegurar la calidad y la precisión de los cálculos, se propone una estrategia de testing utilizando **Vitest**, un framework de testing rápido y moderno compatible con Astro.
+El proyecto utiliza **Vitest** para las pruebas unitarias, el cual se recomienda por su alta velocidad y excelente integración con Astro. La configuración ya está incluida en el proyecto.
 
-### ¿Por qué Vitest?
+-   **Ubicación de los Tests:** Todos los archivos de prueba se encuentran en la carpeta `/test` en la raíz del proyecto.
+-   **Ejecutar Tests:** Para correr la suite de pruebas, simplemente ejecuta el siguiente comando:
 
-- **Integración nativa:** Funciona perfectamente con Vite, el motor que usa Astro.
-- **Rápido:** Es extremadamente rápido gracias a su arquitectura.
-- **API compatible con Jest:** Si estás familiarizado con Jest, la transición es muy sencilla.
-
-### Implementación de Tests
-
-1.  **Instalar Vitest:**
     ```bash
-    npm install -D vitest
+    npm test
     ```
-
-2.  **Añadir el script de test:**
-    En tu archivo `package.json`, agrega el siguiente script:
-    ```json
-    "scripts": {
-      // ... otros scripts
-      "test": "vitest"
-    }
-    ```
-
-3.  **Crear archivos de test:**
-    Los tests se centrarán en la lógica de negocio en `src/logic/amortization.js`. Crea un archivo como `src/logic/amortization.test.js`.
-
-4.  **Ejemplo de un test:**
-    Este es un ejemplo de cómo se podría probar la función `calculateSinglePayment`:
-
-    '''javascript
-    // src/logic/amortization.test.js
-    import { describe, it, expect } from 'vitest';
-    import { calculateAmortization } from './amortization';
-
-    describe('Calculadora de Amortización - Pago Único', () => {
-      it('debería calcular correctamente el interés y el pago total para un pago único', () => {
-        const options = {
-          amount: 10000,
-          interest: 10, // 10% fijo
-          amortizationType: 'single',
-          grantDate: '2025-09-25',
-          singlePaymentDate: '2026-09-25',
-          openingFee: 0
-        };
-
-        const table = calculateAmortization(options);
-
-        expect(table).toHaveLength(1);
-        const payment = table[0];
-
-        expect(payment.principal).toBe(10000);
-        expect(payment.interest).toBe(1000); // 10% de 10000
-        expect(payment.payment).toBe(11000);
-        expect(payment.remaining).toBe(0);
-      });
-    });
-    '''
-
-5.  **Ejecutar los tests:**
-    ```bash
-    npm run test
-    ```
-
-### Próximos Pasos en Testing
-
--   Añadir casos de prueba para los sistemas **francés, alemán y americano**.
--   Probar casos límite como **períodos de gracia y tiempo muerto**.
--   Verificar que la suma de la columna "Amortización" sea igual al monto del préstamo.
 
 ## Troubleshooting
 
